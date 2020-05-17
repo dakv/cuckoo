@@ -1,18 +1,19 @@
-use crate::Bucket;
-use std::{iter, result};
-use std::cmp::max;
-use crate::util::{upper_power2, get_indices_and_fingerprint, get_alt_index};
-use rand::{random, Rng};
+use crate::bucket::Bucket;
 use crate::bucket::BUCKET_SIZE;
-use std::intrinsics::wrapping_mul;
+use crate::util::{get_alt_index, get_indices_and_fingerprint, upper_power2};
+use rand::{random, Rng};
+use std::cmp::max;
+use std::mem;
+use std::{iter, result};
 
 // Maximum number of cuckoo kicks before claiming failure
 const MAX_CUCKOO_COUNT: usize = 500;
 
-const DE_BRUIJN64_TAB: [usize; 64] = [0, 1, 56, 2, 57, 49, 28, 3, 61, 58, 42, 50, 38, 29, 17, 4,
-    62, 47, 59, 36, 45, 43, 51, 22, 53, 39, 33, 30, 24, 18, 12, 5,
-    63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11,
-    54, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6];
+const DE_BRUIJN64_TAB: [usize; 64] = [
+    0, 1, 56, 2, 57, 49, 28, 3, 61, 58, 42, 50, 38, 29, 17, 4, 62, 47, 59, 36, 45, 43, 51, 22, 53,
+    39, 33, 30, 24, 18, 12, 5, 63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11, 54,
+    26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6,
+];
 const DE_BRUIJN64: usize = 0x03f79d71b4ca8b09;
 
 pub type CResult<E> = result::Result<(), E>;
@@ -69,7 +70,7 @@ impl CuckooFilter {
     /// use dakv_cuckoo::CuckooFilter;
     ///
     /// let mut cf = CuckooFilter::default();
-    /// cf.add("test".as_bytes());
+    /// cf.add(b"test");
     /// ```
     pub fn add(&mut self, item: &[u8]) -> CResult<CuckooError> {
         let finger = get_indices_and_fingerprint(item, self.pow);
@@ -93,9 +94,7 @@ impl CuckooFilter {
         let mut rng = rand::thread_rng();
         for _ in 0..MAX_CUCKOO_COUNT {
             let j = rng.gen_range(0, BUCKET_SIZE);
-            let old_fp = fp;
-            fp = self.buckets[i][j];
-            self.buckets[i][j] = old_fp;
+            mem::swap(&mut fp, &mut self.buckets[i][j]);
 
             i = get_alt_index(fp, i, self.pow);
             if self.insert(fp, i) {
@@ -109,22 +108,23 @@ impl CuckooFilter {
     /// ```
     /// use dakv_cuckoo::CuckooFilter;
     /// let mut cf = CuckooFilter::default();
-    /// cf.add("test".as_bytes());
-    /// assert!(cf.contains("test".as_bytes()));
+    /// cf.add(b"test");
+    /// assert!(cf.contains(b"test"));
     /// ```
     pub fn contains(&self, data: &[u8]) -> bool {
         let finger = get_indices_and_fingerprint(data, self.pow);
         let b1 = self.buckets[finger.i1];
         let b2 = self.buckets[finger.i1];
-        b1.get_fingerprint_index(finger.fp).is_some() || b2.get_fingerprint_index(finger.fp).is_some()
+        b1.get_fingerprint_index(finger.fp).is_some()
+            || b2.get_fingerprint_index(finger.fp).is_some()
     }
 
     /// # Example
     /// ```
     /// use dakv_cuckoo::CuckooFilter;
     /// let mut cf = CuckooFilter::default();
-    /// cf.add("test".as_bytes());
-    /// assert!(cf.delete("test".as_bytes()));
+    /// cf.add(b"test");
+    /// assert!(cf.delete(b"test"));
     /// ```
     pub fn delete(&mut self, data: &[u8]) -> bool {
         let finger = get_indices_and_fingerprint(data, self.pow);
@@ -166,12 +166,11 @@ fn rand_index(i1: usize, i2: usize) -> usize {
     }
 }
 
-
 fn trailing_zeros(c: usize) -> usize {
     if c == 0 {
         return 64;
     }
-    let cc = wrapping_mul(c & (c as i64 * (-1)) as usize, DE_BRUIJN64);
+    let cc = (c & (c as i64 * (-1)) as usize).wrapping_mul(DE_BRUIJN64);
     DE_BRUIJN64_TAB[cc >> (64 - 6)]
 }
 
@@ -201,12 +200,12 @@ mod tests {
     fn test_add() {
         let mut cf = CuckooFilter::new(100);
         for _ in 0..8 {
-            let result = cf.add("test".as_bytes());
+            let result = cf.add(b"test");
             assert!(result.is_ok());
         }
         assert_eq!(cf.size(), 8);
         for _ in 0..8 {
-            let result = cf.add("test".as_bytes());
+            let result = cf.add(b"test");
             assert!(!result.is_ok());
         }
         assert_eq!(cf.size(), 8);
@@ -215,11 +214,11 @@ mod tests {
     #[test]
     fn test_delete() {
         let mut cf = CuckooFilter::default();
-        let _ = cf.add("test".as_bytes());
+        let _ = cf.add(b"test");
         assert_eq!(cf.size(), 1);
-        assert!(cf.contains("test".as_bytes()));
-        assert!(cf.delete("test".as_bytes()));
+        assert!(cf.contains(b"test"));
+        assert!(cf.delete(b"test"));
         assert_eq!(cf.size(), 0);
-        assert!(!cf.contains("test".as_bytes()));
+        assert!(!cf.contains(b"test"));
     }
 }

@@ -335,7 +335,7 @@ pub fn upper_power2(x: u64) -> u64 {
     m |= m >> 8;
     m |= m >> 16;
     m |= m >> 32;
-    return m + 1;
+    m + 1
 }
 //
 //pub fn get_index_hash(u: u64) -> u64 {
@@ -364,11 +364,7 @@ pub fn get_indices_and_fingerprint(data: &[u8], pow: usize) -> FingerIndex {
     let fp = get_fingerprint(data);
     let i1 = index_hash & MASKS[pow];
     let i2 = get_alt_index(fp, i1, pow);
-    FingerIndex {
-        fp,
-        i1,
-        i2,
-    }
+    FingerIndex { fp, i1, i2 }
 }
 
 #[cfg(test)]

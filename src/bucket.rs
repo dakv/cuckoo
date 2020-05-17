@@ -2,19 +2,15 @@ use std::ops;
 
 pub const BUCKET_SIZE: usize = 4;
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct Bucket {
     data: [u8; BUCKET_SIZE],
 }
 
 impl Bucket {
-    /// ```
-    /// use dakv_cuckoo::Bucket;
-    /// let bucket = Bucket::new();
-    /// ```
     pub fn new() -> Self {
         Bucket {
-            data: [0; BUCKET_SIZE]
+            data: [0; BUCKET_SIZE],
         }
     }
 
@@ -38,7 +34,7 @@ impl Bucket {
         false
     }
 
-    pub fn get_fingerprint_index(&self, finger: u8) -> Option<usize> {
+    pub fn get_fingerprint_index(self, finger: u8) -> Option<usize> {
         for (i, fp) in self.data.iter().enumerate() {
             if *fp == finger {
                 return Some(i);
@@ -46,6 +42,8 @@ impl Bucket {
         }
         None
     }
+
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         for fp in self.data.iter_mut() {
             *fp = 0;
