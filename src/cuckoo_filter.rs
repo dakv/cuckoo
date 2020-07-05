@@ -14,7 +14,7 @@ const DE_BRUIJN64_TAB: [usize; 64] = [
     39, 33, 30, 24, 18, 12, 5, 63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11, 54,
     26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6,
 ];
-const DE_BRUIJN64: usize = 0x03f79d71b4ca8b09;
+const DE_BRUIJN64: u64 = 0x03f79d71b4ca8b09;
 
 pub type CResult<E> = result::Result<(), E>;
 
@@ -80,8 +80,8 @@ impl CuckooFilter {
         self.reinsert(finger.fp, rand_index(finger.i1, finger.i2))
     }
 
-    fn insert(&mut self, fp: u8, i: usize) -> bool {
-        let index = i % self.buckets.len();
+    fn insert(&mut self, fp: u8, i: u64) -> bool {
+        let index = i as usize % self.buckets.len();
         if self.buckets[index].insert(fp) {
             self.size += 1;
             true
@@ -90,11 +90,11 @@ impl CuckooFilter {
         }
     }
 
-    fn reinsert(&mut self, mut fp: u8, mut i: usize) -> CResult<CuckooError> {
+    fn reinsert(&mut self, mut fp: u8, mut i: u64) -> CResult<CuckooError> {
         let mut rng = rand::thread_rng();
         for _ in 0..MAX_CUCKOO_COUNT {
             let j = rng.gen_range(0, BUCKET_SIZE);
-            mem::swap(&mut fp, &mut self.buckets[i][j]);
+            mem::swap(&mut fp, &mut self.buckets[i as usize][j]);
 
             i = get_alt_index(fp, i, self.pow);
             if self.insert(fp, i) {
@@ -113,8 +113,8 @@ impl CuckooFilter {
     /// ```
     pub fn contains(&self, data: &[u8]) -> bool {
         let finger = get_indices_and_fingerprint(data, self.pow);
-        let b1 = self.buckets[finger.i1];
-        let b2 = self.buckets[finger.i1];
+        let b1 = self.buckets[finger.i1 as usize];
+        let b2 = self.buckets[finger.i1 as usize];
         b1.get_fingerprint_index(finger.fp).is_some()
             || b2.get_fingerprint_index(finger.fp).is_some()
     }
@@ -131,8 +131,8 @@ impl CuckooFilter {
         self.remove(finger.fp, finger.i1) || self.remove(finger.fp, finger.i2)
     }
 
-    fn remove(&mut self, fp: u8, i: usize) -> bool {
-        if self.buckets[i].delete(fp) {
+    fn remove(&mut self, fp: u8, i: u64) -> bool {
+        if self.buckets[i as usize].delete(fp) {
             self.size -= 1;
             return true;
         }
@@ -158,7 +158,7 @@ impl Default for CuckooFilter {
     }
 }
 
-fn rand_index(i1: usize, i2: usize) -> usize {
+fn rand_index(i1: u64, i2: u64) -> u64 {
     if random() {
         i1
     } else {
@@ -170,8 +170,8 @@ fn trailing_zeros(c: usize) -> usize {
     if c == 0 {
         return 64;
     }
-    let cc = (c & (c as i64 * (-1)) as usize).wrapping_mul(DE_BRUIJN64);
-    DE_BRUIJN64_TAB[cc >> (64 - 6)]
+    let cc = (c as u64 & (c as i64 * (-1)) as u64).wrapping_mul(DE_BRUIJN64);
+    DE_BRUIJN64_TAB[(cc as usize).wrapping_shr(64 - 6)]
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use seahash::hash;
 
-const MASKS: [usize; 65] = [
+const MASKS: [u64; 65] = [
     0,
     1,
     3,
@@ -68,7 +68,7 @@ const MASKS: [usize; 65] = [
     18446744073709551615,
 ];
 
-const ALT_HASH: [usize; 256] = [
+const ALT_HASH: [u64; 256] = [
     8706543430870418941,
     5841279983151608680,
     6215326323105245339,
@@ -345,11 +345,11 @@ pub fn upper_power2(x: u64) -> u64 {
 
 pub struct FingerIndex {
     pub fp: u8,
-    pub i1: usize,
-    pub i2: usize,
+    pub i1: u64,
+    pub i2: u64,
 }
 
-pub fn get_alt_index(fp: u8, i: usize, pow: usize) -> usize {
+pub fn get_alt_index(fp: u8, i: u64, pow: usize) -> u64 {
     let mask = MASKS[pow];
     let hash = ALT_HASH[fp as usize] & mask;
     (i & mask) ^ hash
@@ -360,7 +360,7 @@ pub fn get_fingerprint(data: &[u8]) -> u8 {
 }
 
 pub fn get_indices_and_fingerprint(data: &[u8], pow: usize) -> FingerIndex {
-    let index_hash = hash(data) as usize;
+    let index_hash = hash(data);
     let fp = get_fingerprint(data);
     let i1 = index_hash & MASKS[pow];
     let i2 = get_alt_index(fp, i1, pow);
