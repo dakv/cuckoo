@@ -1,0 +1,20 @@
+[package]
+name = "dakv_cuckoo"
+version = "0.1.1"
+authors = ["dkkb <dabkb@aol.com>"]
+edition = "2018"
+
+description = "Cuckoo filter for dakv"
+license = "MIT"
+homepage = "https://github.com/dakv/cuckoo"
+keywords = ["filter", "dakv"]
+categories = ["filter", "dakv"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[example]]
+name = "main"
+path = "example/main.rs"
+
+[dependencies]
+seahash = "4.0.0"
+rand = "0.7.3"
